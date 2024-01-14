@@ -14,8 +14,28 @@
 
 import streamlit as st
 from streamlit.logger import get_logger
+import requests
+import polars as pl
+import pandas as pd
 
 LOGGER = get_logger(__name__)
+
+params = {
+    "key": "088e8c167dd8cd1734faf8cdaa761d5d",
+    "value": "player;was_player;tag;hex;monthly_income;total_development;real_development;max_manpower;FL",
+    "scope": "getCountryData",
+    "format": "json",
+    "save": "e0351f"
+}
+
+@st.cache_data
+def get_data(params):
+    response = requests.get("https://skanderbeg.pm/api.php", params=params)
+    d = response.json()
+    df = pd.concat([pd.DataFrame(v) for k,v in d.items()])
+    df.set_index('tag', inplace=True)
+    return df
+
 
 
 def run():
@@ -26,23 +46,13 @@ def run():
 
     st.write("# Welcome to Streamlit! 👋")
 
-    st.sidebar.success("Select a demo above.")
+    df = get_data(params)
+
+    df
 
     st.markdown(
         """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
+        asd
     """
     )
 
