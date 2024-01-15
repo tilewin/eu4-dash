@@ -17,6 +17,7 @@ from streamlit.logger import get_logger
 import requests
 import polars as pl
 import pandas as pd
+import altair as alt
 
 LOGGER = get_logger(__name__)
 
@@ -25,36 +26,78 @@ params = {
     "value": "player;was_player;tag;hex;monthly_income;total_development;real_development;max_manpower;FL",
     "scope": "getCountryData",
     "format": "json",
-    "save": "e0351f"
+    "save": "None"
 }
 
+
+
+saves = ["1d6ea5", "e243dc"]
+
 @st.cache_data
-def get_data(params):
-    response = requests.get("https://skanderbeg.pm/api.php", params=params)
-    d = response.json()
-    df = pd.concat([pd.DataFrame(v) for k,v in d.items()])
+def get_data(params, saves):
+    dfs = []
+
+    for save in saves:
+        params["save"] = save
+        response = requests.get("https://skanderbeg.pm/api.php", params=params)
+        d = response.json()
+        df = pd.concat([pd.DataFrame(v) for k,v in d.items()])
+        dfs.append(df)
+
+    for i, df in enumerate(dfs):
+        df['session'] = i + 1
+
+    df = pd.concat(dfs, ignore_index=True)
     df.set_index('tag', inplace=True)
     return df
 
-
-
 def run():
     st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
+        page_title="EU4 Twitter Dashboard",
+        page_icon="🗡️",
     )
 
-    st.write("# Welcome to Streamlit! 👋")
-
-    df = get_data(params)
-
-    df
+    st.write("# EU4 Twitter Dashboard")
 
     st.markdown(
         """
-        asd
+        Select the tags you'd like to include, and the metric you'd like to plot.
+        
+        To see a specific tag, you can click on the plot's legend to show it more clearly. Click anywhere on the plot to return to showing all tags.
+        
+        This is the early beta version, please WhatsApp me with any suggestions!
     """
     )
+    df = get_data(params, saves)
+
+    all_tags = df.index.unique().tolist()
+    player_tags = df.query('was_player == "Yes"').index.unique().tolist()
+
+    #options = st.multiselect(
+    #'What Skanderbeg IDs should be used?',
+    #all_tags,
+    #player_tags)
+
+    tags = st.multiselect(
+    'What tags should be included?',
+    all_tags,
+    player_tags)
+
+    metric = st.selectbox(
+    'What would you like to plot?',
+    ('monthly_income', 'real_development', 'max_manpower'))
+
+    legend_selection = alt.selection_point(fields=['tag'], bind='legend')
+
+    chart = alt.Chart(df.loc[tags].reset_index()).mark_line().encode(
+        x='session:O',  # Use 'O' to indicate ordinal (categorical) x-axis
+        y=metric+':Q',  # Use 'Q' to indicate quantitative (numeric) y-axis
+        opacity=alt.condition(legend_selection, alt.value(0.8), alt.value(0.2)),
+        color='tag:N',
+        tooltip=['tag:N']  
+    ).interactive().add_params(legend_selection)
+
+    st.altair_chart(chart, use_container_width=True)
 
 
 if __name__ == "__main__":
