@@ -45,7 +45,7 @@ def get_data(params, saves):
         dfs.append(df)
 
     for i, df in enumerate(dfs):
-        df['session'] = i + 1
+        df['session'] = i
 
     df = pd.concat(dfs, ignore_index=True)
     df.set_index('tag', inplace=True)
