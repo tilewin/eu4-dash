@@ -85,7 +85,7 @@ def run():
 
     metric = st.selectbox(
     'What would you like to plot?',
-    ('monthly_income', 'real_development', 'max_manpower'))
+    ('real_development', 'monthly_income', 'max_manpower'))
 
     legend_selection = alt.selection_point(fields=['tag'], bind='legend')
 
