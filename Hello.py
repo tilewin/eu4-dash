@@ -15,7 +15,6 @@
 import streamlit as st
 from streamlit.logger import get_logger
 import requests
-import polars as pl
 import pandas as pd
 import altair as alt
 
@@ -83,19 +82,27 @@ def run():
     all_tags,
     player_tags)
 
+    df_tags = df.loc[tags]
+
     metric = st.selectbox(
     'What would you like to plot?',
     ('real_development', 'monthly_income', 'max_manpower'))
 
     legend_selection = alt.selection_point(fields=['tag'], bind='legend')
 
-    chart = alt.Chart(df.loc[tags].reset_index()).mark_line().encode(
-        x='session:O',  # Use 'O' to indicate ordinal (categorical) x-axis
-        y=metric+':Q',  # Use 'Q' to indicate quantitative (numeric) y-axis
+    tag_to_hex = df.loc[tags]['hex'].to_dict()
+
+    color_scale = alt.Scale(domain=list(tag_to_hex.keys()), range=list(tag_to_hex.values()))
+
+    chart = alt.Chart(df_tags.reset_index()).mark_line().encode(
+        x=alt.X('session:O', scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
+        y=metric+':Q',
         opacity=alt.condition(legend_selection, alt.value(0.8), alt.value(0.2)),
-        color='tag:N',
+        color=alt.Color('tag:N', scale=color_scale),
         tooltip=['tag:N']  
-    ).interactive().add_params(legend_selection)
+    ).interactive(
+    ).add_params(legend_selection)
+
 
     st.altair_chart(chart, use_container_width=True)
 
