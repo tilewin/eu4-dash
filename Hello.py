@@ -28,9 +28,13 @@ params = {
     "save": "None"
 }
 
+# todo: pull this out so we can have a link for each sheet, published individually
+edit_url = "https://docs.google.com/spreadsheets/d/1h_fxzkHicBAAtWn3QO_apuvdIXeJP98e1R86RUN4xv4/edit?usp=sharing"
+data_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApctCroah-m3FPFP825ejaoLfL5zp/pub?output=csv"
+df_sessions = pd.read_csv(data_url)
 
 
-saves = ["1d6ea5", "e243dc", "b84952"]
+#saves = ["1d6ea5", "e243dc", "b84952"]
 
 @st.cache_data
 def get_data(params, saves):
@@ -58,6 +62,9 @@ def run():
 
     st.write("# EU4 Twitter Dashboard")
 
+    df_sessions
+    saves = df_sessions[df_sessions['Player'].isna()].dropna(axis=1).iloc[0].tolist()
+    
     st.markdown(
         """
         Select the tags you'd like to include, and the metric you'd like to plot.
@@ -71,6 +78,8 @@ def run():
 
     all_tags = df.index.unique().tolist()
     player_tags = df.query('was_player == "Yes"').index.unique().tolist()
+
+    
 
     #options = st.multiselect(
     #'What Skanderbeg IDs should be used?',
