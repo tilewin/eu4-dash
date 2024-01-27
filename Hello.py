@@ -130,6 +130,9 @@ def run():
 
     st.altair_chart(chart, use_container_width=True)
 
+    # need to fold this in to the chart next time
+    player_table = df_joined[['Player', 'tag']].drop_duplicates()
+    player_table
 
 if __name__ == "__main__":
     run()
