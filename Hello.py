@@ -75,39 +75,38 @@ def run():
     # to get saves we take the first row, remove the nas, then remove the session_id col
     # we should roll na removal based on the session column into the table
 
-    # df_sessions
+    
 
     # pull this into an explainable function
     saves = df_sessions.iloc[0].tolist()[1:]
     
     st.markdown(
         """
-        Select the tags you'd like to include, and the metric you'd like to plot.
-        
-        To see a specific tag, you can click on the plot's legend to show it more clearly. Click anywhere on the plot to return to showing all tags.
-        
-        This is the early beta version, please WhatsApp me with any suggestions!
+        The sheet that drives this dashboard is [here](https://docs.google.com/spreadsheets/d/1h_fxzkHicBAAtWn3QO_apuvdIXeJP98e1R86RUN4xv4/edit?usp=sharing). 
+        If there's a new Skanderbeg save ID, or if you've changed tag, feel free to add it there.
     """
     )
     df = get_data(params, saves)
 
-    all_tags = df.index.unique().tolist()
-    player_tags = df.query('was_player == "Yes"').index.unique().tolist()
+    df_sessions_long = df_sessions.melt(id_vars=['Player'], 
+                # this is too specific and needs to be generalised to other columns
+                  var_name='session', 
+                  value_name='tag')
 
+    # Convert 'Session' to integer
+    df_sessions_long['session'] = df_sessions_long['session'].str.extract('(\d+)').astype(int)
+
+    df_joined = pd.merge(df_sessions_long, df, on=['session', 'tag'], how='inner')
+
+    # replace tag and hex with the max values for each player
+
+    latest_tag = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
     
+    player_tag_map = latest_tag.set_index('Player')['tag'].to_dict()
 
+    df_joined['tag'] = df_joined['Player'].map(player_tag_map)
 
-    #options = st.multiselect(
-    #'What Skanderbeg IDs should be used?',
-    #all_tags,
-    #player_tags)
-
-    tags = st.multiselect(
-    'What tags should be included?',
-    all_tags,
-    player_tags)
-
-    df_tags = df.loc[tags]
+    tags =  df_joined['tag'].unique().tolist()
 
     metric = st.selectbox(
     'What would you like to plot?',
@@ -119,7 +118,7 @@ def run():
 
     color_scale = alt.Scale(domain=list(tag_to_hex.keys()), range=list(tag_to_hex.values()))
 
-    chart = alt.Chart(df_tags.reset_index()).mark_line().encode(
+    chart = alt.Chart(df_joined.reset_index()).mark_line().encode(
         x=alt.X('session:O', scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
         y=metric+':Q',
         opacity=alt.condition(legend_selection, alt.value(0.8), alt.value(0.2)),
