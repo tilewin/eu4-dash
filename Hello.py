@@ -30,11 +30,15 @@ params = {
 
 # todo: pull this out so we can have a link for each sheet, published individually
 edit_url = "https://docs.google.com/spreadsheets/d/1h_fxzkHicBAAtWn3QO_apuvdIXeJP98e1R86RUN4xv4/edit?usp=sharing"
-data_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApctCroah-m3FPFP825ejaoLfL5zp/pub?output=csv"
+data_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApctCroah-m3FPFP825ejaoLfL5zp/pub?gid=0&single=true&output=csv"
 df_sessions = pd.read_csv(data_url)
 
+columns_to_drop = df_sessions.columns[df_sessions.iloc[0].isna()]
 
-#saves = ["1d6ea5", "e243dc", "b84952"]
+# Drop those columns
+df_sessions = df_sessions.drop(columns=columns_to_drop).fillna(method='ffill', axis=1)
+
+
 
 @st.cache_data
 def get_data(params, saves):
@@ -62,8 +66,18 @@ def run():
 
     st.write("# EU4 Twitter Dashboard")
 
+    # for this, we want to write a function that maps each tag 
+    # forward until it meets a replacement
+    # then we join on session and tag, then pull as the label
+    # Player + Latest tag
+    # We'll probably need to go backward and rewrite player and tag in the table
+
+    # to get saves we take the first row, remove the nas, then remove the session_id col
+    # we should roll na removal based on the session column into the table
+
     df_sessions
-    saves = df_sessions[df_sessions['Player'].isna()].dropna(axis=1).iloc[0].tolist()
+
+    saves = df_sessions.iloc[0].tolist()[1:]
     
     st.markdown(
         """
@@ -80,6 +94,7 @@ def run():
     player_tags = df.query('was_player == "Yes"').index.unique().tolist()
 
     
+
 
     #options = st.multiselect(
     #'What Skanderbeg IDs should be used?',
