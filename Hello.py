@@ -35,7 +35,7 @@ df_sessions = pd.read_csv(data_url)
 
 columns_to_drop = df_sessions.columns[df_sessions.iloc[0].isna()]
 
-# Drop those columns
+# explain the col dropping logic as well as how ffill works
 df_sessions = df_sessions.drop(columns=columns_to_drop).fillna(method='ffill', axis=1)
 
 
@@ -75,8 +75,9 @@ def run():
     # to get saves we take the first row, remove the nas, then remove the session_id col
     # we should roll na removal based on the session column into the table
 
-    df_sessions
+    # df_sessions
 
+    # pull this into an explainable function
     saves = df_sessions.iloc[0].tolist()[1:]
     
     st.markdown(
