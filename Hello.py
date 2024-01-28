@@ -106,15 +106,27 @@ def run():
 
     df_joined['tag'] = df_joined['Player'].map(player_tag_map)
 
-    tags =  df_joined['tag'].unique().tolist()
-
     metric = st.selectbox(
     'What would you like to plot?',
     ('real_development', 'monthly_income', 'max_manpower'))
 
+    def get_latest_session_df(df):
+        latest_session = df['session'].max()
+        latest_session_df = df[df['session'] == latest_session]
+        return(latest_session_df)
+    
+    def get_legend_order(df, metric):
+        latest_df = get_latest_session_df(df)
+        # as a bodge, convert the metric colum to numeric (should do this earlier)
+        latest_df[metric] = pd.to_numeric(latest_df[metric])
+        sorted_df = latest_df.sort_values(by=metric, ascending=False).set_index('tag')
+        return(sorted_df)
+
+    legend_order = get_legend_order(df_joined, metric)
+
     legend_selection = alt.selection_point(fields=['tag'], bind='legend')
 
-    tag_to_hex = df.loc[tags]['hex'].to_dict()
+    tag_to_hex = legend_order['hex'].to_dict()
 
     color_scale = alt.Scale(domain=list(tag_to_hex.keys()), range=list(tag_to_hex.values()))
 
