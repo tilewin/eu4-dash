@@ -98,17 +98,24 @@ def run():
 
     df_joined = pd.merge(df_sessions_long, df, on=['session', 'tag'], how='inner')
 
-    # replace tag and hex with the max values for each player
+    df_joined['label'] = df_joined.apply(lambda row: f"{row['Player']} ({row['tag']})", axis=1)
+    df_joined[['real_development', 'monthly_income', 'max_manpower']] =  df_joined[['real_development', 'monthly_income', 'max_manpower']].apply(pd.to_numeric)
 
-    latest_tag = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
-    
-    player_tag_map = latest_tag.set_index('Player')['tag'].to_dict()
+    df_latest = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
+
+    player_tag_map = df_latest.set_index('Player')['tag'].to_dict()
 
     df_joined['tag'] = df_joined['Player'].map(player_tag_map)
 
     metric = st.selectbox(
     'What would you like to plot?',
     ('real_development', 'monthly_income', 'max_manpower'))
+
+    st.markdown(
+        """
+
+    """
+    )
 
     def get_latest_session_df(df):
         latest_session = df['session'].max()
@@ -117,8 +124,6 @@ def run():
     
     def get_legend_order(df, metric):
         latest_df = get_latest_session_df(df)
-        # as a bodge, convert the metric colum to numeric (should do this earlier)
-        latest_df[metric] = pd.to_numeric(latest_df[metric])
         sorted_df = latest_df.sort_values(by=metric, ascending=False).set_index('tag')
         return(sorted_df)
 
@@ -130,21 +135,46 @@ def run():
 
     color_scale = alt.Scale(domain=list(tag_to_hex.keys()), range=list(tag_to_hex.values()))
 
-    chart = alt.Chart(df_joined.reset_index()).mark_line().encode(
+    line_chart = alt.Chart(df_joined.reset_index()).mark_line().encode(
         x=alt.X('session:O', scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
         y=metric+':Q',
         opacity=alt.condition(legend_selection, alt.value(0.8), alt.value(0.2)),
         color=alt.Color('tag:N', scale=color_scale),
         tooltip=['tag:N']  
     ).interactive(
-    ).add_params(legend_selection)
+    ).add_params(legend_selection).properties(
+    title=alt.TitleParams(
+        text=f'{metric} over time'))
 
+    st.altair_chart(line_chart, use_container_width=True)
 
-    st.altair_chart(chart, use_container_width=True)
+    end_chart = alt.Chart(df_latest.reset_index()).mark_bar().encode(
+        y=alt.Y('label:N', sort='-x'),#, scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
+        x=metric+':Q',
+        color=alt.Color('tag:N', scale=color_scale, legend=None),
+        tooltip=['tag:N']  
+    ).properties(
+    title=alt.TitleParams(
+        text=f'{metric} currently'))
 
-    # need to fold this in to the chart next time
-    player_table = df_joined[['Player', 'tag']].drop_duplicates()
-    player_table
+    st.altair_chart(end_chart, use_container_width=True)
+
+    df_joined.sort_values(by=['tag', 'session'], inplace=True)
+    df_joined['lagged'] = df_joined.groupby('tag')[metric].shift(1)  # This creates the lagged column
+    df_joined['session_diff'] = df_joined[metric] - df_joined['lagged']  # Calculate the difference
+    latest_diff = df_joined.dropna().groupby('tag').last()
+    
+    diff_chart = alt.Chart(latest_diff.reset_index()).mark_bar().encode(
+        y=alt.Y('label:N', sort='-x'),#, scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
+        x='session_diff:Q',
+        color=alt.Color('tag:N', scale=color_scale, legend=None),
+        tooltip=['tag:N']  
+    ).properties(
+    title=alt.TitleParams(
+        text=f'{metric} change this session'))
+    
+    st.altair_chart(diff_chart, use_container_width=True)
+
 
 if __name__ == "__main__":
     run()
