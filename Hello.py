@@ -147,18 +147,7 @@ def run():
         text=f'{metric} over time'))
 
     st.altair_chart(line_chart, use_container_width=True)
-
-    end_chart = alt.Chart(df_latest.reset_index()).mark_bar().encode(
-        y=alt.Y('label:N', sort='-x'),#, scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
-        x=metric+':Q',
-        color=alt.Color('tag:N', scale=color_scale, legend=None),
-        tooltip=['tag:N']  
-    ).properties(
-    title=alt.TitleParams(
-        text=f'{metric} currently'))
-
-    st.altair_chart(end_chart, use_container_width=True)
-
+    
     df_joined.sort_values(by=['tag', 'session'], inplace=True)
     df_joined['lagged'] = df_joined.groupby('tag')[metric].shift(1)  # This creates the lagged column
     df_joined['session_diff'] = df_joined[metric] - df_joined['lagged']  # Calculate the difference
@@ -175,6 +164,16 @@ def run():
     
     st.altair_chart(diff_chart, use_container_width=True)
 
+    end_chart = alt.Chart(df_latest.reset_index()).mark_bar().encode(
+        y=alt.Y('label:N', sort='-x'),#, scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
+        x=metric+':Q',
+        color=alt.Color('tag:N', scale=color_scale, legend=None),
+        tooltip=['tag:N']  
+    ).properties(
+    title=alt.TitleParams(
+        text=f'{metric} currently'))
+
+    st.altair_chart(end_chart, use_container_width=True)
 
 if __name__ == "__main__":
     run()
