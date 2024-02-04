@@ -99,7 +99,7 @@ def run():
     df_joined = pd.merge(df_sessions_long, df, on=['session', 'tag'], how='inner')
 
     df_joined['label'] = df_joined.apply(lambda row: f"{row['Player']} ({row['tag']})", axis=1)
-    df_joined[['real_development', 'monthly_income', 'max_manpower']] =  df_joined[['real_development', 'monthly_income', 'max_manpower']].apply(pd.to_numeric)
+    df_joined[['real_development', 'monthly_income', 'max_manpower', 'FL']] =  df_joined[['real_development', 'monthly_income', 'max_manpower', 'FL']].apply(pd.to_numeric)
 
     df_latest = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
 
@@ -109,7 +109,7 @@ def run():
 
     metric = st.selectbox(
     'What would you like to plot?',
-    ('real_development', 'monthly_income', 'max_manpower'))
+    ('real_development', 'monthly_income', 'max_manpower', 'FL'))
 
     st.markdown(
         """
