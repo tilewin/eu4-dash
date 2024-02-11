@@ -99,7 +99,7 @@ def run():
     df_joined = pd.merge(df_sessions_long, df, on=['session', 'tag'], how='inner')
 
     df_joined['label'] = df_joined.apply(lambda row: f"{row['Player']} ({row['tag']})", axis=1)
-    df_joined[['real_development', 'monthly_income', 'max_manpower', 'FL']] =  df_joined[['real_development', 'monthly_income', 'max_manpower', 'FL']].apply(pd.to_numeric)
+    df_joined[['real_development', 'monthly_income', 'max_manpower']] =  df_joined[['real_development', 'monthly_income', 'max_manpower']].apply(pd.to_numeric)
 
     df_latest = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
 
@@ -109,7 +109,7 @@ def run():
 
     metric = st.selectbox(
     'What would you like to plot?',
-    ('real_development', 'monthly_income', 'max_manpower', 'FL'))
+    ('real_development', 'monthly_income', 'max_manpower'))
 
     st.markdown(
         """
@@ -151,7 +151,7 @@ def run():
     df_joined.sort_values(by=['tag', 'session'], inplace=True)
     df_joined['lagged'] = df_joined.groupby('tag')[metric].shift(1)  # This creates the lagged column
     df_joined['session_diff'] = df_joined[metric] - df_joined['lagged']  # Calculate the difference
-    latest_diff = df_joined.dropna().groupby('tag').last()
+    latest_diff = df_joined.groupby('tag').last()
     
     diff_chart = alt.Chart(latest_diff.reset_index()).mark_bar().encode(
         y=alt.Y('label:N', sort='-x'),#, scale=alt.Scale(padding=0.1), axis=alt.Axis(labelAngle=0)),
