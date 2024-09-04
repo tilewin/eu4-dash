@@ -12,7 +12,21 @@ API_KEY = "088e8c167dd8cd1734faf8cdaa761d5d"
 API_URL = "https://skanderbeg.pm/api.php"
 EDIT_URL = "https://docs.google.com/spreadsheets/d/1h_fxzkHicBAAtWn3QO_apuvdIXeJP98e1R86RUN4xv4/edit?usp=sharing"
 DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApctCroah-m3FPFP825ejaoLfL5zp/pub?gid=0&single=true&output=csv"
-METRICS = ["real_development", "monthly_income", "max_manpower"]
+METRICS = ["real_development", "monthly_income", "inc_no_subs", "max_manpower"]
+REQUIRED_FIELDS = ["player", "was_player", "tag", "hex"]
+
+def get_api_params(metrics: List[str], required_fields: List[str]) -> Dict[str, str]:
+    """
+    Generate the API parameters based on the metrics and required fields.
+    """
+    all_fields = required_fields + metrics
+    return {
+        "key": API_KEY,
+        "value": ";".join(all_fields),
+        "scope": "getCountryData",
+        "format": "json",
+        "save": "None"
+    }
 
 @st.cache_data
 def get_data(params: Dict[str, str], saves: List[str]) -> pd.DataFrame:
@@ -157,13 +171,7 @@ def run():
     df_sessions = process_sessions_data(pd.read_csv(DATA_URL))
     saves = get_saves(df_sessions)
 
-    params = {
-        "key": API_KEY,
-        "value": "player;was_player;tag;hex;monthly_income;total_development;real_development;max_manpower;FL",
-        "scope": "getCountryData",
-        "format": "json",
-        "save": "None"
-    }
+    params = get_api_params(METRICS, REQUIRED_FIELDS)
 
     df = get_data(params, saves)
 
