@@ -11,7 +11,7 @@ LOGGER = get_logger(__name__)
 API_KEY = "088e8c167dd8cd1734faf8cdaa761d5d"
 API_URL = "https://skanderbeg.pm/api.php"
 EDIT_URL = "https://docs.google.com/spreadsheets/d/1h_fxzkHicBAAtWn3QO_apuvdIXeJP98e1R86RUN4xv4/edit?usp=sharing"
-DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApCtCroah-m3FPFP825ejaoLfL5zp/pub?gid=0&single=true&output=csv"
+DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXz-17mvdL20ECgzpxGznrUCXqlxm7zz-wOoYdQPg9pi4tQe_ApctCroah-m3FPFP825ejaoLfL5zp/pub?gid=0&single=true&output=csv"
 METRICS = ["real_development", "monthly_income", "max_manpower"]
 
 @st.cache_data
@@ -42,7 +42,7 @@ def process_sessions_data(df_sessions: pd.DataFrame) -> pd.DataFrame:
     Process the sessions data by dropping empty columns and forward-filling values.
     """
     columns_to_drop = df_sessions.columns[df_sessions.iloc[0].isna()]
-    return df_sessions.drop(columns=columns_to_drop).fillna(method='ffill', axis=1)
+    return df_sessions.drop(columns=columns_to_drop).ffill(axis=1)
 
 def get_saves(df_sessions: pd.DataFrame) -> List[str]:
     """
@@ -61,6 +61,11 @@ def prepare_joined_data(df_sessions: pd.DataFrame, df: pd.DataFrame) -> pd.DataF
     df_joined = pd.merge(df_sessions_long, df, on=['session', 'tag'], how='inner')
     df_joined['label'] = df_joined.apply(lambda row: f"{row['Player']} ({row['tag']})", axis=1)
     df_joined[METRICS] = df_joined[METRICS].apply(pd.to_numeric)
+    
+    # Update tags to latest for each player
+    df_latest = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
+    player_tag_map = df_latest.set_index('Player')['tag'].to_dict()
+    df_joined['tag'] = df_joined['Player'].map(player_tag_map)
     return df_joined
 
 def get_latest_session_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -109,6 +114,23 @@ def create_diff_chart(df: pd.DataFrame, metric: str, color_scale: alt.Scale) -> 
         title=alt.TitleParams(text=f'{metric} change this session')
     )
 
+def create_pct_change_chart(df: pd.DataFrame, metric: str, color_scale: alt.Scale) -> alt.Chart:
+    """
+    Create a bar chart showing the percentage change in metric for the latest session.
+    """
+    df = df.sort_values(by=['tag', 'session'])
+    df['lagged'] = df.groupby('tag')[metric].shift(1)
+    df['session_pct_change'] = ((df[metric] - df['lagged']) / df['lagged']) * 100
+    latest_pct_change = df.groupby('tag').last()
+    return alt.Chart(latest_pct_change.reset_index()).mark_bar().encode(
+        y=alt.Y('label:N', sort='-x'),
+        x='session_pct_change:Q',
+        color=alt.Color('tag:N', scale=color_scale, legend=None),
+        tooltip=['tag:N']  
+    ).properties(
+        title=alt.TitleParams(text=f'{metric} percentage change this session')
+    )
+
 def create_end_chart(df: pd.DataFrame, metric: str, color_scale: alt.Scale) -> alt.Chart:
     """
     Create a bar chart showing the current metric values.
@@ -144,6 +166,7 @@ def run():
     }
 
     df = get_data(params, saves)
+
     df_joined = prepare_joined_data(df_sessions, df)
 
     metric = st.selectbox('What would you like to plot?', METRICS)
@@ -157,6 +180,9 @@ def run():
 
     diff_chart = create_diff_chart(df_joined, metric, color_scale)
     st.altair_chart(diff_chart, use_container_width=True)
+
+    pct_change_chart = create_pct_change_chart(df_joined, metric, color_scale)
+    st.altair_chart(pct_change_chart, use_container_width=True)
 
     df_latest = df_joined.loc[df_joined.groupby('Player')['session'].idxmax()]
     end_chart = create_end_chart(df_latest, metric, color_scale)
