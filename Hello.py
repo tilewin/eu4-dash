@@ -40,12 +40,30 @@ def get_data(params: Dict[str, str], saves: List[str]) -> pd.DataFrame:
         try:
             with requests.get(API_URL, params=params) as response:
                 response.raise_for_status()
+                content = response.text
+                if not content.strip():
+                    raise ValueError("Empty response from API")
                 data = response.json()
                 df = pd.concat([pd.DataFrame(v) for v in data.values()])
                 df['session'] = i
+                # Parse fields
+                for col in df.columns:
+                    if col in METRICS:
+                        df[col] = df[col].apply(parse_mana)
                 dfs.append(df)
         except requests.RequestException as e:
             LOGGER.error(f"Error fetching data for save {save}: {e}")
+            st.error(f"Failed to fetch data for save {save}. API might be down or experiencing issues.")
+        except ValueError as e:
+            LOGGER.error(f"Error parsing data for save {save}: {e}")
+            st.error(f"Failed to parse data for save {save}. Received invalid or empty response from API.")
+        except Exception as e:
+            LOGGER.error(f"Unexpected error for save {save}: {e}")
+            st.error(f"Unexpected error occurred while processing save {save}.")
+
+    if not dfs:
+        st.error("Failed to fetch data for all saves. Please check your internet connection and API status.")
+        return None
 
     df = pd.concat(dfs, ignore_index=True)
     df.set_index('tag', inplace=True)
@@ -174,6 +192,10 @@ def run():
     params = get_api_params(METRICS, REQUIRED_FIELDS)
 
     df = get_data(params, saves)
+
+    if df is None or df.empty:
+        st.error("No data available. Please check the data source and try again.")
+        return
 
     df_joined = prepare_joined_data(df_sessions, df)
 
