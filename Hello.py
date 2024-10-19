@@ -46,10 +46,6 @@ def get_data(params: Dict[str, str], saves: List[str]) -> pd.DataFrame:
                 data = response.json()
                 df = pd.concat([pd.DataFrame(v) for v in data.values()])
                 df['session'] = i
-                # Parse fields
-                for col in df.columns:
-                    if col in METRICS:
-                        df[col] = df[col].apply(parse_mana)
                 dfs.append(df)
         except requests.RequestException as e:
             LOGGER.error(f"Error fetching data for save {save}: {e}")
@@ -62,7 +58,7 @@ def get_data(params: Dict[str, str], saves: List[str]) -> pd.DataFrame:
             st.error(f"Unexpected error occurred while processing save {save}.")
 
     if not dfs:
-        st.error("Failed to fetch data for all saves. Please check your internet connection and API status.")
+        st.error("Failed to fetch data for all saves. The Skanderbeg API (which is unfortunately unreloable) is down.")
         return None
 
     df = pd.concat(dfs, ignore_index=True)
